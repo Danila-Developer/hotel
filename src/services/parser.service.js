@@ -59,7 +59,7 @@ class ParserService {
     static async getHotels(request, offset = 0) {
         const url = ParserService.getBookingUrl(request, offset)
 
-        const browser = await puppeteer.launch({ headless: true, devtools: true, executablePath: '/usr/bin/chromium-browser' })
+        const browser = await puppeteer.launch({ headless: true, devtools: true, executablePath: '/usr/bin/chromium-browser', args: ['--no-sandbox'] })
         const page = await browser.newPage()
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36')
 
@@ -112,7 +112,7 @@ class ParserService {
 
     static async getEmailFromOfficialSite(hotelName) {
         const start = new Date().getTime();
-        const browser = await puppeteer.launch({ headless: true, devtools: true, executablePath: '/usr/bin/chromium-browser' })
+        const browser = await puppeteer.launch({ headless: true, devtools: true, executablePath: '/usr/bin/chromium-browser', args: ['--no-sandbox'] })
 
         try {
             const page = await browser.newPage()
