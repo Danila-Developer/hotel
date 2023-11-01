@@ -50,6 +50,7 @@ class ParserService {
                     offset = offset + 25
                 } else {
                     if (retries < 3) {
+                        offset = offset + 25
                         retries = retries + 1
                     } else {
                         ParserService.actualRequestId = false
@@ -99,7 +100,7 @@ class ParserService {
                     request.continue();
                 }
             })
-            await page.setDefaultNavigationTimeout(0);
+            //await page.setDefaultNavigationTimeout(0);
             await page.goto(url, { waitUntil: 'networkidle2' })
 
 
