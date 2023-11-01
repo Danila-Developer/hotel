@@ -2,7 +2,6 @@ const models = require('../models')
 const puppeteer = require('puppeteer')
 const { TimeoutError } = require('puppeteer')
 const moment = require('moment')
-const {process_params} = require('express/lib/router')
 
 class ParserService {
     static actualRequestId = ''
@@ -98,8 +97,8 @@ class ParserService {
                     request.continue();
                 }
             })
-
-            await page.goto(url, { waitUntil: 'networkidle2', timeout: 0})
+            await page.setDefaultNavigationTimeout(0);
+            await page.goto(url, { waitUntil: 'networkidle2' })
 
 
             const country = await page.$eval('div[data-testid="breadcrumbs"]', element => Array.from(element.querySelector('ol').querySelectorAll('li'))[1].querySelector('a').querySelector('span').innerText)
@@ -215,7 +214,7 @@ class ParserService {
                 });
                 await page2.goto(url, { waitUntil: 'networkidle2', timeout: 0 })
                 const htmlPage = await page2.evaluate(() => document.documentElement.innerHTML)
-                const match = htmlPage.match(/[\w\.-]+@[\w\.-]+\.\w+/gu)
+                const match = htmlPage.match(/[\w.-]+@[\w.-]+\.\w+/gu)
 
                 await browser.close()
 
