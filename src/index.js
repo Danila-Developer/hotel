@@ -21,13 +21,15 @@ const corsConfig = {
     origin: 'http://localhost:3000',
     credentials: true
 }
-server.use('/static', express.static(path.resolve(__dirname, '../static')));
+server.use('/', express.static(path.resolve(__dirname, '../public/static/')));
+server.use('/static', express.static(path.resolve(__dirname, '../public/static/')));
+console.log(path.resolve(__dirname, '../public/static/'))
 server.use(cors(corsConfig));
 server.options('*', cors(corsConfig))
 server.use(express.json())
 server.use('/api', router)
 server.get('/', (req, res) => {
-    return res.sendFile(path.resolve(__dirname, '../static/index.html'))
+    return res.sendFile(path.resolve(__dirname, '../public/index.html'))
 })
 
 
