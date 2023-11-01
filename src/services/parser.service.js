@@ -24,6 +24,7 @@ class ParserService {
 
     static async startParsing() {
         while (ParserService.actualRequestId) {
+            console.log(ParserService.lastOffset)
             try {
                 const [hotelNames, country]  = await ParserService.getHotels(ParserService.actualRequest, ParserService.lastOffset)
                 if (hotelNames?.length > 0 && country) {
@@ -40,9 +41,10 @@ class ParserService {
                                 }
                             }
                         } else {
+                            ParserService.lastOffset = 0
                             console.log('parsing stopped')
-                            console.log(ParserService.actualRequestId)
                             console.log(333)
+                            console.log(ParserService.lastOffset)
                             console.log(ParserService.actualRequest)
                             break
                         }
@@ -53,6 +55,7 @@ class ParserService {
                     ParserService.lastOffset = 0
                     console.log('parsing stopped')
                     console.log(222)
+                    console.log(ParserService.lastOffset)
                     console.log(ParserService.actualRequestId)
                     console.log(ParserService.actualRequest)
                     break
@@ -60,6 +63,7 @@ class ParserService {
             } catch (err) {
                 ParserService.lastOffset = ParserService.lastOffset + 25
                 console.log('retry')
+                console.log(ParserService.lastOffset)
                 console.log(err)
             }
 
