@@ -99,7 +99,7 @@ class ParserService {
                 }
             })
 
-            await page.goto(url, { waitUntil: 'networkidle2' })
+            await page.goto(url, { waitUntil: 'networkidle2', timeout: 0})
 
 
             const country = await page.$eval('div[data-testid="breadcrumbs"]', element => Array.from(element.querySelector('ol').querySelectorAll('li'))[1].querySelector('a').querySelector('span').innerText)
@@ -183,7 +183,7 @@ class ParserService {
 
             const page = await browser.newPage()
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36')
-            await page.goto('https://www.google.ru/maps/', { waitUntil: 'networkidle2' })
+            await page.goto('https://www.google.ru/maps/', { waitUntil: 'networkidle2', timeout: 0 })
 
             await page.type(`input[name=q]`, hotelName, {delay: 20})
 
@@ -213,7 +213,7 @@ class ParserService {
                         request.continue();
                     }
                 });
-                await page2.goto(url, { waitUntil: 'networkidle2' })
+                await page2.goto(url, { waitUntil: 'networkidle2', timeout: 0 })
                 const htmlPage = await page2.evaluate(() => document.documentElement.innerHTML)
                 const match = htmlPage.match(/[\w\.-]+@[\w\.-]+\.\w+/gu)
 
