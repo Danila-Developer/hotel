@@ -2,6 +2,7 @@ const models = require('../models')
 const puppeteer = require('puppeteer')
 const { TimeoutError } = require('puppeteer')
 const moment = require('moment')
+const {process_params} = require('express/lib/router')
 
 class ParserService {
     static actualRequestId = ''
@@ -77,10 +78,11 @@ class ParserService {
         try {
             const url = ParserService.getBookingUrl(request, offset)
             console.log(url)
-            browser = await puppeteer.launch({ headless: true, devtools: true,
-                executablePath: '/usr/bin/chromium-browser',
-                args: ['--no-sandbox']
-            })
+            const browserParams = process.env.PRODUCTION_MODE === 'FALSE'
+                ?   { headless: true, devtools: true }
+                :   { headless: true, devtools: true, executablePath: '/usr/bin/chromium-browser', args: ['--no-sandbox'] }
+            browser = await puppeteer.launch(browserParams)
+
             const page = await browser.newPage()
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36')
 
@@ -171,10 +173,10 @@ class ParserService {
         let browser
         console.log(2)
         try {
-            browser = await puppeteer.launch({ headless: true, devtools: true,
-                executablePath: '/usr/bin/chromium-browser',
-                args: ['--no-sandbox']
-            })
+            const browserParams = process.env.PRODUCTION_MODE === 'FALSE'
+                ?   { headless: true, devtools: true }
+                :   { headless: true, devtools: true, executablePath: '/usr/bin/chromium-browser', args: ['--no-sandbox'] }
+            browser = await puppeteer.launch(browserParams)
 
             const page = await browser.newPage()
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36')
@@ -182,16 +184,16 @@ class ParserService {
 
             await page.type(`input[name=q]`, hotelName, {delay: 20})
 
-            await page.waitForSelector('div[data-index="0"]', { timeout: 2000 })
+            await page.waitForSelector('div[data-index="0"]', { timeout: 1200 })
             await page.click('div[data-index="0"]')
 
             try {
-                await page.waitForSelector('a[data-tooltip="Перейти на сайт"]', { timeout: 3000 })
+                await page.waitForSelector('a[data-tooltip="Перейти на сайт"]', { timeout: 1200 })
             } catch (err) {
                 if (err instanceof TimeoutError) {
-                    await page.waitForSelector('div[role="feed"]', { timeout: 3000 })
+                    await page.waitForSelector('div[role="feed"]', { timeout: 800 })
                     await page.evaluate(() => document.querySelector('div[role="feed"]').querySelectorAll('a')[1].click())
-                    await page.waitForSelector('a[data-tooltip="Перейти на сайт"]', { timeout: 3000 })
+                    await page.waitForSelector('a[data-tooltip="Перейти на сайт"]', { timeout: 1000 })
                 }
             }
 
