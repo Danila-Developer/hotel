@@ -51,6 +51,7 @@ class ParserService {
                     ParserService.lastOffset = ParserService.lastOffset + 25
                 } else {
                     ParserService.actualRequestId = false
+                    ParserService.lastOffset = 0
                     console.log('parsing stopped')
                     console.log(222)
                     console.log(ParserService.actualRequestId)
