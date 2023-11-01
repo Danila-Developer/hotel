@@ -22,6 +22,7 @@ class ParserService {
 
     static async startParsing() {
         let offset = 0
+        let retries = 0
 
         while (ParserService.actualRequestId) {
             try {
@@ -48,12 +49,17 @@ class ParserService {
                     }
                     offset = offset + 25
                 } else {
-                    ParserService.actualRequestId = false
-                    console.log('parsing stopped')
-                    console.log(222)
-                    console.log(ParserService.actualRequestId)
-                    console.log(ParserService.actualRequest)
-                    break
+                    if (retries < 3) {
+                        retries = retries + 1
+                    } else {
+                        ParserService.actualRequestId = false
+                        console.log('parsing stopped')
+                        console.log(222)
+                        console.log(ParserService.actualRequestId)
+                        console.log(ParserService.actualRequest)
+                        break
+                    }
+
                 }
             } catch (err) {
                 offset = offset + 25
