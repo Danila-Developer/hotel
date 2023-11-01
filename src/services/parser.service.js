@@ -39,7 +39,6 @@ class ParserService {
                                     console.log(err)
                                 }
                             }
-
                         } else {
                             console.log('parsing stopped')
                             console.log(ParserService.actualRequestId)
@@ -131,7 +130,6 @@ class ParserService {
 
 
             await browser.close()
-            console.log(names)
             return [names, country]
         } catch (err) {
             browser ? await browser.close() : null
@@ -181,8 +179,9 @@ class ParserService {
             browser = await puppeteer.launch(browserParams)
 
             const page = await browser.newPage()
+            await page.setDefaultNavigationTimeout(0);
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36')
-            await page.goto('https://www.google.ru/maps/', { waitUntil: 'networkidle2', timeout: 0 })
+            await page.goto('https://www.google.ru/maps/', { waitUntil: 'networkidle2'})
 
             await page.type(`input[name=q]`, hotelName, {delay: 20})
 
@@ -203,6 +202,7 @@ class ParserService {
 
             if (url) {
                 const page2 = await browser.newPage()
+                await page2.setDefaultNavigationTimeout(0);
                 await page2.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36')
                 await page2.setRequestInterception(true);
                 page2.on('request', request => {
@@ -212,7 +212,7 @@ class ParserService {
                         request.continue();
                     }
                 });
-                await page2.goto(url, { waitUntil: 'networkidle2', timeout: 0 })
+                await page2.goto(url, { waitUntil: 'networkidle2'})
                 const htmlPage = await page2.evaluate(() => document.documentElement.innerHTML)
                 const match = htmlPage.match(/[\w.-]+@[\w.-]+\.\w+/gu)
 
