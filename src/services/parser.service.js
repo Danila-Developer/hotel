@@ -19,6 +19,7 @@ class ParserService {
     static initRequest(request) {
         ParserService.actualRequestId = request.id
         ParserService.actualRequest = request
+        ParserService.lastOffset = 0
         ParserService.startParsing()
     }
 
@@ -71,6 +72,7 @@ class ParserService {
     static stopParsing() {
         ParserService.actualRequestId = false
         ParserService.actualRequest = false
+        ParserService.lastOffset = 0
     }
 
     static async getHotels(request, offset = 0) {
