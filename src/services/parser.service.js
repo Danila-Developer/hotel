@@ -6,7 +6,6 @@ const moment = require('moment')
 class ParserService {
     static actualRequestId = ''
     static actualRequest = false
-    static lastOffset = 0
 
     static async createRequest({ place, rating = [], price = [], reportCount }) {
         const request = await models.RequestModel.create({ place, rating: rating.join(','), price: price.join(','), reportCount })
@@ -18,15 +17,15 @@ class ParserService {
     static initRequest(request) {
         ParserService.actualRequestId = request.id
         ParserService.actualRequest = request
-        ParserService.lastOffset = 0
         ParserService.startParsing()
     }
 
     static async startParsing() {
+        let offset = 0
+
         while (ParserService.actualRequestId) {
-            console.log(ParserService.lastOffset)
             try {
-                const [hotelNames, country]  = await ParserService.getHotels(ParserService.actualRequest, ParserService.lastOffset)
+                const [hotelNames, country]  = await ParserService.getHotels(ParserService.actualRequest, offset)
                 if (hotelNames?.length > 0 && country) {
                     for (let i in hotelNames) {
                         if (ParserService.actualRequestId) {
@@ -41,29 +40,24 @@ class ParserService {
                                 }
                             }
                         } else {
-                            ParserService.lastOffset = 0
                             console.log('parsing stopped')
                             console.log(333)
-                            console.log(ParserService.lastOffset)
                             console.log(ParserService.actualRequest)
                             break
                         }
                     }
-                    ParserService.lastOffset = ParserService.lastOffset + 25
+                    offset = offset + 25
                 } else {
                     ParserService.actualRequestId = false
-                    ParserService.lastOffset = 0
                     console.log('parsing stopped')
                     console.log(222)
-                    console.log(ParserService.lastOffset)
                     console.log(ParserService.actualRequestId)
                     console.log(ParserService.actualRequest)
                     break
                 }
             } catch (err) {
-                ParserService.lastOffset = ParserService.lastOffset + 25
+                offset = offset + 25
                 console.log('retry')
-                console.log(ParserService.lastOffset)
                 console.log(err)
             }
 
@@ -74,7 +68,6 @@ class ParserService {
     static stopParsing() {
         ParserService.actualRequestId = false
         ParserService.actualRequest = false
-        ParserService.lastOffset = 0
     }
 
     static async getHotels(request, offset = 0) {
