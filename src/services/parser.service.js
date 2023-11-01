@@ -184,11 +184,11 @@ class ParserService {
 
             await page.type(`input[name=q]`, hotelName, {delay: 20})
 
-            await page.waitForSelector('div[data-index="0"]', { timeout: 1200 })
+            await page.waitForSelector('div[data-index="0"]', { timeout: 1800 })
             await page.click('div[data-index="0"]')
 
             try {
-                await page.waitForSelector('a[data-tooltip="Перейти на сайт"]', { timeout: 1200 })
+                await page.waitForSelector('a[data-tooltip="Перейти на сайт"]', { timeout: 1800 })
             } catch (err) {
                 if (err instanceof TimeoutError) {
                     await page.waitForSelector('div[role="feed"]', { timeout: 800 })
