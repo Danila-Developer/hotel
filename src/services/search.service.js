@@ -1,5 +1,9 @@
 const axios = require('axios')
 const models = require('../models')
+const fs = require('fs')
+const path = require('path')
+const ParserService = require('./parser.service')
+const { Op } = require("sequelize")
 
 class SearchService {
     static async getSearch(query) {
@@ -21,11 +25,83 @@ class SearchService {
     }
 
     static async getRequestById(request) {
-        return await models.RequestModel.findAll({where: {id: request}, raw: true, order: [['createdAt', 'DESC']]})
+        const data = await models.RequestModel.findAll({where: {id: request}, raw: true, order: [['createdAt', 'DESC']]})
+        console.log(ParserService.actualRequestId)
+
+        return Promise.all(data.map(async item => {
+            return {
+                ...item,
+                isRunning: item.id === ParserService.actualRequestId,
+                totalHotels: (await models.HotelModel.count({
+                    raw: true,
+                    where: {requestId: item.id, email: {[Op.not]: ''}}
+                }))
+            }
+        }))
     }
 
     static async getAllRequests() {
-        return await models.RequestModel.findAll({raw: true, order: [['createdAt', 'DESC']], limit: 20})
+        const data = await models.RequestModel.findAll({raw: true, order: [['createdAt', 'DESC']], limit: 20})
+
+        return Promise.all(data.map(async item => {
+            return {
+                ...item,
+                isRunning: item.id === ParserService.actualRequestId,
+                totalHotels: (await models.HotelModel.count({
+                    raw: true,
+                    where: {requestId: item.id, email: {[Op.not]: ''}}
+                }))
+            }
+        }))
+    }
+
+    static async getRequestExportPath({ requestId, fields, separator = ';' }) {
+        const request = (await SearchService.getRequestById(requestId))[0]
+
+        const fieldsToGet = []
+
+        Object.keys(fields).map(item => {
+            if (fields[item]) {
+                fieldsToGet.push(item)
+            }
+        })
+
+        const hotels = await models.HotelModel.findAll({
+            where: {
+                requestId: requestId
+            },
+            raw: true,
+            attributes: fieldsToGet
+        })
+
+        const filteredHotels = hotels.filter((item) => item.email !== '')
+
+        const pathToFile = path.resolve(__dirname, `../../exports/${request.place}.txt`)
+
+        let file = ''
+
+        filteredHotels.map((item, index) => {
+            let row = ''
+            Object.keys(item).map((key, index) => {
+                if (Object.keys(item).length - 1 === index) {
+                    if (key === 'email') {
+                        return row = row + item[key].split(',').join(separator)
+                    }
+                    return row = row + item[key]
+                }
+                row = row + item[key] + separator
+            })
+
+            if (filteredHotels.length - 1 !== index) {
+                row = row + '\n'
+            }
+
+            file = file + row
+        })
+
+        fs.writeFileSync(pathToFile, file)
+
+        return pathToFile
     }
 }
 

@@ -6,9 +6,11 @@ const moment = require('moment')
 class ParserService {
     static actualRequestId = ''
     static actualRequest = false
+    static lastOffset = 0
 
     static async createRequest({ place, rating = [], price = [], reportCount }) {
         const request = await models.RequestModel.create({ place, rating: rating.join(','), price: price.join(','), reportCount })
+        await ParserService.deleteOldRequests()
         ParserService.initRequest(request)
         return request
     }
@@ -20,33 +22,46 @@ class ParserService {
     }
 
     static async startParsing() {
-        let offset = 0
-
         while (ParserService.actualRequestId) {
-            const [hotelNames, country]  = await ParserService.getHotels(ParserService.actualRequest, offset)
-            if (hotelNames?.length > 0) {
-                for (let i in hotelNames) {
-                    if (ParserService.actualRequestId) {
-                        const hotelInfo = await ParserService.getEmailFromOfficialSite(hotelNames[i])
+            try {
+                const [hotelNames, country]  = await ParserService.getHotels(ParserService.actualRequest, ParserService.lastOffset)
+                if (hotelNames?.length > 0 && country) {
+                    for (let i in hotelNames) {
+                        if (ParserService.actualRequestId) {
+                            const hotelInfo = await ParserService.getEmailFromOfficialSite(hotelNames[i])
 
-                        if (hotelInfo?.name) {
-                            const { name, emails, executionTime, officialUrl} = hotelInfo
-                            try {
-                                await models.HotelModel.create({ name, email: emails?.join(','), executionTime, officialUrl, country, requestId: ParserService.actualRequestId })
-                            } catch (err) {
-                                console.log(err)
+                            if (hotelInfo?.name) {
+                                const { name, emails, executionTime, officialUrl} = hotelInfo
+                                try {
+                                    await models.HotelModel.create({ name, email: emails?.join(','), executionTime, officialUrl, country, requestId: ParserService.actualRequestId })
+                                } catch (err) {
+                                    console.log(err)
+                                }
                             }
-                        }
 
-                    } else {
-                        break
+                        } else {
+                            console.log('parsing stopped')
+                            console.log(ParserService.actualRequestId)
+                            console.log(333)
+                            console.log(ParserService.actualRequest)
+                            break
+                        }
                     }
+                    ParserService.lastOffset = ParserService.lastOffset + 25
+                } else {
+                    ParserService.actualRequestId = false
+                    console.log('parsing stopped')
+                    console.log(222)
+                    console.log(ParserService.actualRequestId)
+                    console.log(ParserService.actualRequest)
+                    break
                 }
-                offset = offset + 25
-            } else {
-                ParserService.actualRequestId = false
-                break
+            } catch (err) {
+                ParserService.lastOffset = ParserService.lastOffset + 25
+                console.log('retry')
+                console.log(err)
             }
+
         }
 
     }
@@ -57,29 +72,70 @@ class ParserService {
     }
 
     static async getHotels(request, offset = 0) {
-        const url = ParserService.getBookingUrl(request, offset)
+        let browser
+        console.log(1)
+        try {
+            const url = ParserService.getBookingUrl(request, offset)
+            console.log(url)
+            browser = await puppeteer.launch({ headless: true, devtools: true,
+                executablePath: '/usr/bin/chromium-browser',
+                args: ['--no-sandbox']
+            })
+            const page = await browser.newPage()
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36')
 
-        const browser = await puppeteer.launch({ headless: true, devtools: true, executablePath: '/usr/bin/chromium-browser', args: ['--no-sandbox'] })
-        const page = await browser.newPage()
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36')
+            await page.setJavaScriptEnabled(false)
+            await page.setRequestInterception(true);
+            page.on('request', request => {
+                if (['image', 'font', 'stylesheet'].includes(request.resourceType())) {
+                    request.abort();
+                } else {
+                    request.continue();
+                }
+            })
 
-        await page.setJavaScriptEnabled(false)
-        await page.setRequestInterception(true);
-        page.on('request', request => {
-            if (['image', 'font', 'stylesheet'].includes(request.resourceType())) {
-                request.abort();
+            await page.goto(url, { waitUntil: 'networkidle2' })
+
+
+            const country = await page.$eval('div[data-testid="breadcrumbs"]', element => Array.from(element.querySelector('ol').querySelectorAll('li'))[1].querySelector('a').querySelector('span').innerText)
+
+            let names
+            if (+request?.reportCount === 0) {
+                names = await page.$$eval('div[data-testid="title"]', (elements) => elements.map(el => el.innerText))
             } else {
-                request.continue();
+                names = await page.$$eval('div[data-testid="property-card-container"]', cards => {
+                    return cards.map(card => {
+                        const name = card.querySelector('div[data-testid="title"]').innerText
+                        const reviewScope = card.querySelector('div[data-testid="review-score"]')
+
+                        if (reviewScope !== null) {
+                            if (reviewScope.querySelectorAll('div')[3]) {
+                                const reportCount = +reviewScope.querySelectorAll('div')[3]?.innerText?.split(' ')[0]
+
+                                return { name, reportCount }
+                            }
+                        }
+                    })
+                })
+
+                names = names.filter(name => {
+                    if (name === null) return false
+
+                    return name.reportCount > +request?.reportCount;
+                }).map(name => name.name)
             }
-        });
 
-        await page.goto(url, { waitUntil: 'networkidle2' })
-        const names = await page.$$eval('div[data-testid="title"]', (elements) => elements.map(el => el.innerText))
-        const country = await page.$eval('div[data-testid="breadcrumbs"]', element => Array.from(element.querySelector('ol').querySelectorAll('li'))[1].querySelector('a').querySelector('span').innerText)
 
-        await browser.close()
+            await browser.close()
+            console.log(names)
+            return [names, country]
+        } catch (err) {
+            browser ? await browser.close() : null
+            console.log(err)
 
-        return [names, country]
+            return [[], '']
+        }
+
     }
 
     static getBookingUrl({ place, rating, price }, offset) {
@@ -111,10 +167,15 @@ class ParserService {
     }
 
     static async getEmailFromOfficialSite(hotelName) {
-        const start = new Date().getTime();
-        const browser = await puppeteer.launch({ headless: true, devtools: true, executablePath: '/usr/bin/chromium-browser', args: ['--no-sandbox'] })
-
+        const start = new Date().getTime()
+        let browser
+        console.log(2)
         try {
+            browser = await puppeteer.launch({ headless: true, devtools: true,
+                executablePath: '/usr/bin/chromium-browser',
+                args: ['--no-sandbox']
+            })
+
             const page = await browser.newPage()
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36')
             await page.goto('https://www.google.ru/maps/', { waitUntil: 'networkidle2' })
@@ -155,7 +216,10 @@ class ParserService {
 
                 if (match) {
                     const emails = Array.from(new Set(match.filter((item => {
-                        return !/\.jpg$/ug.test(item) && !/[0-9]$/ug.test(item) && !/\.png$/ug.test(item)
+                        return  !/\.jpg$/ug.test(item) &&
+                                !/[0-9]$/ug.test(item) &&
+                                !/\.png$/ug.test(item) &&
+                                !/wixpress/ug.test(item)
                     }))))
 
                     return {
@@ -182,7 +246,7 @@ class ParserService {
                 }
             }
         } catch (error) {
-            await browser.close()
+            browser ? await browser.close() : null
             console.log(error)
                 return {
                     name: hotelName,
@@ -193,28 +257,42 @@ class ParserService {
         }
     }
 
-    static async getHotelsByRequest(requestId) {
-        return await ParserService.getHotelsInDB(requestId)
+    static async getHotelsByRequest(requestId, page) {
+        return await ParserService.getHotelsInDB(requestId, page)
     }
 
-    static async getHotelsByCurrentRequest() {
+    static async getHotelsByCurrentRequest(page) {
         if (ParserService.actualRequestId) {
-            return await ParserService.getHotelsInDB(ParserService.actualRequestId)
+            return await ParserService.getHotelsInDB(ParserService.actualRequestId, page)
         }
 
         const lastRequest = await models.RequestModel.findAll({raw: true, order: [['createdAt', 'DESC']], limit: 1})
 
         if (lastRequest.length > 0) {
-            return ParserService.getHotelsInDB(lastRequest[0].id)
+            return ParserService.getHotelsInDB(lastRequest[0].id, page)
         }
 
         return []
     }
 
-    static async getHotelsInDB(requestId) {
+    static async getHotelsInDB(requestId, page) {
         const data =  await models.HotelModel.findAll({where: {requestId: requestId}, raw: true})
+        const filteredData = data.filter(item => item?.email)
 
-        return data.filter(item => item?.email)
+        return {
+            result: data.filter(item => item?.email).slice(page*30, page*30 + 30),
+            total: filteredData.length
+        }
+
+    }
+
+    static async deleteOldRequests() {
+        const requests = await models.RequestModel.findAll({offset: 20, order: [['createdAt', 'DESC']]})
+
+        await Promise.all(requests.map(async request => {
+            await models.HotelModel.destroy({where: { requestId: request.id }})
+            await models.RequestModel.destroy({ where: {id: request.id} })
+        }))
     }
 }
 

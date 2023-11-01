@@ -1,4 +1,5 @@
 const SearchService = require('../services/search.service')
+const ParserService = require('../services/parser.service')
 
 class SearchController {
 
@@ -24,6 +25,16 @@ class SearchController {
             }
 
             return res.status(200).json(data)
+        } catch (err) {
+            console.log(err)
+        }
+    }
+
+    static async postRequestExport(req, res) {
+        try {
+            const path = await SearchService.getRequestExportPath(req.body)
+
+            return res.status(200).sendFile(path)
         } catch (err) {
             console.log(err)
         }

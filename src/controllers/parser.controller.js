@@ -27,9 +27,9 @@ class ParserController {
             let data = []
 
             if (req.query?.request) {
-                data = await ParserService.getHotelsByRequest(req.query.request)
+                data = await ParserService.getHotelsByRequest(req.query.request, req.query.page)
             } else {
-                data = await ParserService.getHotelsByCurrentRequest()
+                data = await ParserService.getHotelsByCurrentRequest(req.query.page)
             }
 
             return res.status(200).json(data)
