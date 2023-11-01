@@ -183,7 +183,7 @@ class ParserService {
             browser = await puppeteer.launch(browserParams)
 
             const page = await browser.newPage()
-            await page.setDefaultNavigationTimeout(0);
+            //await page.setDefaultNavigationTimeout(0);
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36')
             await page.goto('https://www.google.ru/maps/', { waitUntil: 'networkidle2'})
 
@@ -206,7 +206,7 @@ class ParserService {
 
             if (url) {
                 const page2 = await browser.newPage()
-                await page2.setDefaultNavigationTimeout(0);
+                //await page2.setDefaultNavigationTimeout(0);
                 await page2.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36')
                 await page2.setRequestInterception(true);
                 page2.on('request', request => {
