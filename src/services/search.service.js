@@ -76,6 +76,10 @@ class SearchService {
 
         const filteredHotels = hotels.filter((item) => item.email !== '')
 
+        if (!fs.existsSync(path.resolve(__dirname, '../../exports'))) {
+            fs.mkdirSync(path.resolve(__dirname, '../../exports'))
+        }
+
         const pathToFile = path.resolve(__dirname, `../../exports/${request.place}.txt`)
 
         let file = ''
